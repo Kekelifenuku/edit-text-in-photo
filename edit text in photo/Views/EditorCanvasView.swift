@@ -1,15 +1,25 @@
 import SwiftUI
+import StoreKit
 
 struct EditorCanvasView: View {
     var viewModel: PhotoEditorViewModel
+    @Environment(RevenueCatAccess.self) private var revenueCat
+    @Environment(\.requestReview) private var requestReview
+    @Environment(\.scenePhase) private var scenePhase
     @State private var editingRegion: TextRegion?
     @State private var showHistory = false
+    @State private var shouldCheckReviewAfterEditDismissal = false
 
     @State private var scale: CGFloat = 1
     @State private var lastScale: CGFloat = 1
     @State private var panOffset: CGSize = .zero
     @State private var lastPanOffset: CGSize = .zero
     @State private var showingOriginal = false
+    @State private var activeTool: EditorTool = .select
+    @State private var drawStart: CGPoint?
+    @State private var drawRect: CGRect?
+    @State private var isErasing = false
+    @State private var detectionNotice: String?
 
     var body: some View {
         ZStack {
@@ -20,9 +30,10 @@ struct EditorCanvasView: View {
                     let imageSize = CGSize(width: cgImage.width, height: cgImage.height)
                     let displaySize = fitSize(imageSize, in: geo.size.applying(.init(scaleX: 0.92, y: 0.86)))
                     let baseScale = imageSize.width > 0 ? displaySize.width / imageSize.width : 1
+                    let imageVerticalBias = min(48, geo.size.height * 0.055)
                     let baseOffset = CGPoint(
                         x: (geo.size.width - displaySize.width) / 2,
-                        y: (geo.size.height - displaySize.height) / 2
+                        y: (geo.size.height - displaySize.height) / 2 - imageVerticalBias
                     )
 
                     ZStack(alignment: .topLeading) {
@@ -30,10 +41,10 @@ struct EditorCanvasView: View {
                             .resizable()
                             .frame(width: displaySize.width, height: displaySize.height)
                             .offset(x: baseOffset.x, y: baseOffset.y)
-                            .shadow(color: .black.opacity(0.5), radius: 24, x: 0, y: 12)
+                            .shadow(color: .black.opacity(0.32), radius: 16, x: 0, y: 8)
 
                         if !showingOriginal {
-                            ForEach(viewModel.regions) { region in
+                            ForEach(viewModel.regions.filter { !$0.isHidden }) { region in
                                 RegionOverlay(
                                     region: region,
                                     isSelected: viewModel.selectedRegionID == region.id,
@@ -41,6 +52,15 @@ struct EditorCanvasView: View {
                                     offset: baseOffset
                                 )
                             }
+                        }
+
+                        if let drawRect, activeTool == .draw {
+                            Rectangle()
+                                .fill(Theme.accent.opacity(0.14))
+                                .overlay(Rectangle().stroke(Theme.accent, style: StrokeStyle(lineWidth: 2, dash: [7, 5])))
+                                .frame(width: drawRect.width, height: drawRect.height)
+                                .position(x: drawRect.midX, y: drawRect.midY)
+                                .allowsHitTesting(false)
                         }
                     }
                     .onLongPressGesture(minimumDuration: 0.35, maximumDistance: 60) {
@@ -65,29 +85,80 @@ struct EditorCanvasView: View {
                     .simultaneousGesture(
                         DragGesture()
                             .onChanged { value in
+                                if activeTool == .draw {
+                                    drawStart = drawStart ?? value.startLocation
+                                    guard let drawStart else { return }
+                                    drawRect = CGRect(
+                                        x: min(drawStart.x, value.location.x),
+                                        y: min(drawStart.y, value.location.y),
+                                        width: abs(value.location.x - drawStart.x),
+                                        height: abs(value.location.y - drawStart.y)
+                                    )
+                                    return
+                                }
                                 guard scale > 1 else { return }
                                 panOffset = CGSize(
                                     width: lastPanOffset.width + value.translation.width,
                                     height: lastPanOffset.height + value.translation.height
                                 )
                             }
-                            .onEnded { _ in lastPanOffset = panOffset }
+                            .onEnded { value in
+                                if activeTool == .draw {
+                                    defer {
+                                        drawStart = nil
+                                        drawRect = nil
+                                    }
+                                    guard let drawStart, baseScale > 0 else { return }
+                                    let selection = CGRect(
+                                        x: min(drawStart.x, value.location.x),
+                                        y: min(drawStart.y, value.location.y),
+                                        width: abs(value.location.x - drawStart.x),
+                                        height: abs(value.location.y - drawStart.y)
+                                    )
+                                    let imageRect = CGRect(
+                                        x: (selection.minX - baseOffset.x) / baseScale,
+                                        y: (selection.minY - baseOffset.y) / baseScale,
+                                        width: selection.width / baseScale,
+                                        height: selection.height / baseScale
+                                    )
+                                    if let region = viewModel.addManualRegion(in: imageRect) {
+                                        Haptics.selection()
+                                        activeTool = .select
+                                        editingRegion = region
+                                    }
+                                    return
+                                }
+                                lastPanOffset = panOffset
+                            }
                     )
                     .onTapGesture { location in
+                        guard activeTool != .draw else { return }
                         guard baseScale > 0 else { return }
                         let imagePoint = CGPoint(
                             x: (location.x - baseOffset.x) / baseScale,
                             y: (location.y - baseOffset.y) / baseScale
                         )
-                        if let hit = viewModel.regions.first(where: { $0.hitTest(imagePoint) }) {
+                        if let hit = viewModel.regions.first(where: { !$0.isHidden && $0.hitTest(imagePoint) }) {
                             Haptics.selection()
+                            if activeTool == .erase {
+                                isErasing = true
+                                Task {
+                                    _ = await viewModel.erase(region: hit)
+                                    isErasing = false
+                                }
+                                return
+                            }
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                                 viewModel.select(hit)
                             }
-                            editingRegion = hit
                         }
                     }
                     .onTapGesture(count: 2) {
+                        guard activeTool == .select else { return }
+                        if let region = viewModel.selectedRegion {
+                            editingRegion = region
+                            return
+                        }
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                             scale = 1; lastScale = 1; panOffset = .zero; lastPanOffset = .zero
                         }
@@ -102,8 +173,14 @@ struct EditorCanvasView: View {
                     Text("BEFORE")
                         .font(.system(size: 11, weight: .bold))
                         .tracking(1.2)
-                        .foregroundStyle(.white)
-                        .glassPill(padding: Theme.spacingS)
+                        .foregroundStyle(Theme.canvasTextPrimary)
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 7)
+                        .background(Theme.canvasSurface, in: RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall)
+                                .stroke(Theme.canvasStroke, lineWidth: 1)
+                        )
                         .padding(.top, 72)
                     Spacer()
                 }
@@ -114,6 +191,19 @@ struct EditorCanvasView: View {
             VStack {
                 topBar
                 Spacer()
+                if viewModel.stage == .detectingText {
+                    detectionStatus("Finding text…", isLoading: true)
+                        .padding(.horizontal, Theme.spacingM)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else if let detectionNotice {
+                    detectionStatus(detectionNotice, isLoading: false, isError: detectionNotice == "Text detection failed")
+                        .padding(.horizontal, Theme.spacingM)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else if let errorMessage = viewModel.errorMessage {
+                    detectionStatus(errorMessage, isLoading: false, isError: true)
+                        .padding(.horizontal, Theme.spacingM)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
                 if let failure = viewModel.verificationFailure {
                     VerificationBanner(
                         message: failure.message,
@@ -127,14 +217,22 @@ struct EditorCanvasView: View {
                     .padding(.horizontal, Theme.spacingM)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                ExportControls(viewModel: viewModel)
+                if let region = viewModel.selectedRegion, !region.isHidden {
+                    selectedActions(for: region)
+                        .padding(.horizontal, Theme.spacingM)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                toolRail
+                ExportControls(viewModel: viewModel, paywallPresentationEnabled: editingRegion == nil)
                     .padding(.bottom, Theme.spacingS)
             }
         }
         .statusBarHidden(false)
-        .preferredColorScheme(.dark)
-        .sheet(item: $editingRegion) { region in
-            TextEditSheet(viewModel: viewModel, region: region)
+        .sheet(item: $editingRegion, onDismiss: handleTextEditDismissal) { region in
+            TextEditSheet(viewModel: viewModel, region: region) {
+                ReviewRequestManager.shared.recordSuccessfulAction()
+                shouldCheckReviewAfterEditDismissal = true
+            }
         }
         .sheet(isPresented: $showHistory) {
             HistoryView(viewModel: viewModel)
@@ -150,10 +248,10 @@ struct EditorCanvasView: View {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Theme.canvasTextPrimary)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 40, height: 40)
             }
-            .background(.ultraThinMaterial, in: Circle())
-            .overlay(Circle().stroke(Theme.canvasStroke, lineWidth: 1))
+            .background(Theme.canvasSurface, in: RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall))
+            .overlay(RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall).stroke(Theme.canvasStroke, lineWidth: 1))
 
             Spacer()
 
@@ -163,6 +261,13 @@ struct EditorCanvasView: View {
                     showHistory = true
                 }
                 Divider().frame(height: 18).overlay(Theme.canvasStroke)
+                toolbarIconButton(
+                    viewModel.stage == .detectingText ? "hourglass" : "text.viewfinder",
+                    enabled: viewModel.stage == .ready,
+                    action: scanForText
+                )
+                .accessibilityLabel(viewModel.stage == .detectingText ? "Finding text" : "Find text")
+                .accessibilityHint("Scan this photo again for text that wasn't detected.")
                 toolbarIconButton("arrow.uturn.backward", enabled: viewModel.canUndo) {
                     Haptics.lightTap()
                     withAnimation { viewModel.undo() }
@@ -173,11 +278,91 @@ struct EditorCanvasView: View {
                 }
             }
             .padding(.horizontal, Theme.spacingXS)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().stroke(Theme.canvasStroke, lineWidth: 1))
+            .padding(.vertical, 2)
+            .background(Theme.canvasSurface, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.canvasStroke, lineWidth: 1))
         }
         .padding(.horizontal, Theme.spacingM)
         .padding(.top, Theme.spacingS)
+    }
+
+    private var toolRail: some View {
+        VStack(spacing: Theme.spacingXS) {
+            HStack(spacing: Theme.spacingXS) {
+                ForEach(EditorTool.allCases) { tool in
+                    Button {
+                        Haptics.lightTap()
+                        withAnimation(.easeOut(duration: 0.18)) {
+                            activeTool = tool
+                            if tool == .draw {
+                                scale = 1
+                                lastScale = 1
+                                panOffset = .zero
+                                lastPanOffset = .zero
+                            }
+                        }
+                    } label: {
+                        Label(tool.title, systemImage: tool.icon)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(activeTool == tool ? Theme.canvasBackground : Theme.canvasTextSecondary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 40)
+                            .background(
+                                activeTool == tool ? Theme.accent : .clear,
+                                in: RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall)
+                            )
+                    }
+                }
+            }
+            .padding(Theme.spacingXS)
+            .background(Theme.canvasSurface, in: RoundedRectangle(cornerRadius: Theme.cornerRadiusMedium))
+            .overlay(RoundedRectangle(cornerRadius: Theme.cornerRadiusMedium).stroke(Theme.canvasStroke, lineWidth: 1))
+
+            HStack(spacing: Theme.spacingXS) {
+                Image(systemName: isErasing ? "hourglass" : activeTool.icon)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                Text(isErasing ? "Removing text…" : activeTool.hint)
+                    .font(.caption)
+                    .foregroundStyle(Theme.canvasTextSecondary)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.horizontal, Theme.spacingM)
+    }
+
+    private func selectedActions(for region: TextRegion) -> some View {
+        HStack(spacing: Theme.spacingS) {
+            Button {
+                Haptics.lightTap()
+                editingRegion = region
+            } label: {
+                Label("Edit", systemImage: "pencil")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.canvasBackground)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall))
+            }
+
+            Button {
+                Haptics.warning()
+                isErasing = true
+                Task {
+                    _ = await viewModel.erase(region: region)
+                    isErasing = false
+                }
+            } label: {
+                Label("Erase", systemImage: "eraser.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.canvasTextPrimary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Theme.canvasSurfaceElevated, in: RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall))
+                    .overlay(RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall).stroke(Theme.canvasStroke, lineWidth: 1))
+            }
+            .disabled(isErasing)
+        }
     }
 
     private func toolbarIconButton(_ systemImage: String, enabled: Bool, action: @escaping () -> Void) -> some View {
@@ -190,11 +375,87 @@ struct EditorCanvasView: View {
         .disabled(!enabled)
     }
 
+    private func detectionStatus(_ message: String, isLoading: Bool, isError: Bool = false) -> some View {
+        HStack(spacing: Theme.spacingS) {
+            if isLoading {
+                ProgressView().tint(Theme.accent)
+            } else if isError {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Theme.danger)
+            } else {
+                Image(systemName: message == "No new text found" ? "text.magnifyingglass" : "checkmark.circle.fill")
+                    .foregroundStyle(Theme.accent)
+            }
+            Text(message)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Theme.canvasTextPrimary)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, Theme.spacingM)
+        .padding(.vertical, Theme.spacingS)
+        .background(Theme.canvasSurface, in: RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall))
+        .overlay(RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall).stroke(Theme.canvasStroke, lineWidth: 1))
+    }
+
+    private func scanForText() {
+        guard viewModel.stage == .ready else { return }
+        withAnimation { detectionNotice = nil }
+        Task {
+            let message: String
+            do {
+                let addedCount = try await viewModel.detectAdditionalText()
+                if addedCount == 0 {
+                    message = "No new text found"
+                } else {
+                    message = "Found \(addedCount) new text area\(addedCount == 1 ? "" : "s")"
+                }
+            } catch {
+                message = "Text detection failed"
+            }
+            withAnimation { detectionNotice = message }
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            if detectionNotice == message {
+                withAnimation { detectionNotice = nil }
+            }
+        }
+    }
+
+    private func handleTextEditDismissal() {
+        guard shouldCheckReviewAfterEditDismissal else { return }
+        shouldCheckReviewAfterEditDismissal = false
+
+        Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 1_500_000_000)
+            } catch {
+                return
+            }
+
+            let presentation = ReviewRequestManager.PresentationContext(
+                appIsActive: scenePhase == .active,
+                onboardingIsPresented: false,
+                paywallIsPresented: revenueCat.showProPaywall,
+                purchaseFlowIsPresented: revenueCat.showProPaywall,
+                errorIsPresented: viewModel.errorMessage != nil || viewModel.verificationFailure != nil,
+                anotherModalIsPresented: showHistory || editingRegion != nil || viewModel.workingImage == nil || viewModel.stage != .ready
+            )
+            guard ReviewRequestManager.shared.claimReviewRequestIfEligible(
+                appVersion: ReviewRequestManager.currentAppVersion,
+                presentation: presentation
+            ) else {
+                return
+            }
+
+            requestReview()
+        }
+    }
+
     private func fitSize(_ size: CGSize, in bounds: CGSize) -> CGSize {
         guard size.width > 0, size.height > 0, bounds.width > 0, bounds.height > 0 else { return .zero }
         let scale = min(bounds.width / size.width, bounds.height / size.height)
         return CGSize(width: size.width * scale, height: size.height * scale)
     }
+
 }
 
 /// A detected text region drawn as animated corner brackets (photo-editor style) rather than a

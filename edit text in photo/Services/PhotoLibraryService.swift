@@ -4,12 +4,15 @@ import UIKit
 enum PhotoLibraryService {
     enum SaveError: LocalizedError {
         case notAuthorized
+        case restricted
         case saveFailed(Error)
 
         var errorDescription: String? {
             switch self {
             case .notAuthorized:
-                return "Photo library access wasn't granted. Enable it in Settings to save edited photos."
+                return "Photo access is off for this app. Allow Retouch to add photos in Settings."
+            case .restricted:
+                return "Saving photos is restricted on this device."
             case .saveFailed(let error):
                 return error.localizedDescription
             }
@@ -18,7 +21,14 @@ enum PhotoLibraryService {
 
     nonisolated static func save(_ image: UIImage) async throws {
         let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
-        guard status == .authorized || status == .limited else {
+        switch status {
+        case .authorized, .limited:
+            break
+        case .restricted:
+            throw SaveError.restricted
+        case .denied, .notDetermined:
+            throw SaveError.notAuthorized
+        @unknown default:
             throw SaveError.notAuthorized
         }
         do {

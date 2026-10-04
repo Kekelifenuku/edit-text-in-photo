@@ -43,6 +43,36 @@ enum FontMatcher {
         return best ?? Match(postScriptName: "HelveticaNeue", pointSize: estimatedSize, tracking: 0, score: 0)
     }
 
+    /// Restores the detected style and narrows its glyphs as needed to fit the replacement's
+    /// longest line while preserving the original font height.
+    nonisolated static func fittingStyle(_ style: TextStyle, to text: String, width: CGFloat) -> TextStyle {
+        guard !text.isEmpty, width > 0, style.pointSize > 0 else { return style }
+
+        var font = CTFontCreateWithName(style.fontName as CFString, style.pointSize, nil)
+        var traits: CTFontSymbolicTraits = []
+        if style.isBold { traits.insert(.traitBold) }
+        if style.isItalic { traits.insert(.traitItalic) }
+        if !traits.isEmpty, let styledFont = CTFontCreateCopyWithSymbolicTraits(font, style.pointSize, nil, traits, traits) {
+            font = styledFont
+        }
+
+        let widestLine = text.components(separatedBy: .newlines).reduce(CGFloat.zero) { current, part in
+            guard !part.isEmpty else { return current }
+            let attributedLine = NSAttributedString(string: part, attributes: [
+                .font: font,
+                .kern: style.tracking
+            ])
+            let line = CTLineCreateWithAttributedString(attributedLine)
+            let lineWidth = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+            return max(current, lineWidth)
+        }
+
+        guard widestLine > width else { return style }
+        var fitted = style
+        fitted.horizontalScale = min(style.horizontalScale, width / widestLine)
+        return fitted
+    }
+
     nonisolated private static func rasterize(text: String, postScriptName: String, size: CGFloat, canvasSize: CGSize) -> [UInt8]? {
         let width = max(1, Int(canvasSize.width))
         let height = max(1, Int(canvasSize.height))

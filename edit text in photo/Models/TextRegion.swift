@@ -8,6 +8,7 @@ struct TextRegion: Identifiable, Hashable {
     let id: UUID
     var text: String
     var confidence: Float
+    var isHidden: Bool
     var topLeft: CGPoint
     var topRight: CGPoint
     var bottomRight: CGPoint
@@ -22,11 +23,13 @@ struct TextRegion: Identifiable, Hashable {
         topRight: CGPoint,
         bottomRight: CGPoint,
         bottomLeft: CGPoint,
-        characterBoxes: [CGRect] = []
+        characterBoxes: [CGRect] = [],
+        isHidden: Bool = false
     ) {
         self.id = id
         self.text = text
         self.confidence = confidence
+        self.isHidden = isHidden
         self.topLeft = topLeft
         self.topRight = topRight
         self.bottomRight = bottomRight

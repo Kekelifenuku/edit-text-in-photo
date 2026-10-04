@@ -12,19 +12,22 @@ enum OCRService {
         var cropPadding: CGFloat = 0.2
         var rerunConfidenceThreshold: Float = 0.7
         var rerunMinHeightFraction: CGFloat = 0.05
+        var minimumTextHeightFraction: Float = 0.01
 
         nonisolated init(
             recognitionLevel: RecognizeTextRequest.RecognitionLevel = .accurate,
             upscaleFactor: CGFloat = 3.0,
             cropPadding: CGFloat = 0.2,
             rerunConfidenceThreshold: Float = 0.7,
-            rerunMinHeightFraction: CGFloat = 0.05
+            rerunMinHeightFraction: CGFloat = 0.05,
+            minimumTextHeightFraction: Float = 0.01
         ) {
             self.recognitionLevel = recognitionLevel
             self.upscaleFactor = upscaleFactor
             self.cropPadding = cropPadding
             self.rerunConfidenceThreshold = rerunConfidenceThreshold
             self.rerunMinHeightFraction = rerunMinHeightFraction
+            self.minimumTextHeightFraction = minimumTextHeightFraction
         }
     }
 
@@ -56,6 +59,7 @@ enum OCRService {
     nonisolated private static func recognize(cgImage: CGImage, config: Config) async throws -> [TextRegion] {
         var request = RecognizeTextRequest()
         request.recognitionLevel = config.recognitionLevel
+        request.minimumTextHeightFraction = config.minimumTextHeightFraction
         request.automaticallyDetectsLanguage = true
         request.usesLanguageCorrection = true
 

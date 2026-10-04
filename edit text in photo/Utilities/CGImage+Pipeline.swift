@@ -12,6 +12,18 @@ extension CGImage {
         return cropping(to: clamped)
     }
 
+    /// Returns a crop backed by its own bitmap allocation instead of a view into the source
+    /// image's provider. Use this for retained snapshots so a small patch cannot keep a full photo
+    /// alive through shared backing storage.
+    nonisolated func copiedCrop(to rect: CGRect) -> CGImage? {
+        guard let cropped = cropped(to: rect),
+              let context = BitmapContext.make(width: cropped.width, height: cropped.height) else {
+            return nil
+        }
+        context.draw(cropped, in: CGRect(x: 0, y: 0, width: cropped.width, height: cropped.height))
+        return context.makeImage()
+    }
+
     /// Resizes by `factor`, keeping the result oriented the same way as the source.
     nonisolated func scaled(by factor: CGFloat, interpolationQuality: CGInterpolationQuality = .high) -> CGImage? {
         guard factor > 0 else { return nil }

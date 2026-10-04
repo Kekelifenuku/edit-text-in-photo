@@ -1,15 +1,18 @@
 import CoreGraphics
 import Foundation
 
-/// One committed edit, holding enough to undo it: a snapshot of the full working image from
-/// immediately before the edit was applied.
+/// One committed edit, holding only the changed region needed to undo or redo it.
+/// Keeping localized snapshots avoids retaining two full-resolution images per history item.
 struct TextEdit: Identifiable {
     let id: UUID
     let regionID: UUID
     let originalText: String
     let newText: String
+    let originalHidden: Bool
+    let newHidden: Bool
     let style: TextStyle
     let timestamp: Date
-    let beforeImage: CGImage
-    let afterImage: CGImage
+    let patchRect: CGRect
+    let beforePatch: CGImage
+    let afterPatch: CGImage
 }

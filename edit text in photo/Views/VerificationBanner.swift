@@ -19,7 +19,7 @@ struct VerificationBanner: View {
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(Theme.canvasTextSecondary)
                         .frame(width: 22, height: 22)
-                        .background(Color.white.opacity(0.08), in: Circle())
+                        .background(Theme.canvasSurfaceElevated, in: RoundedRectangle(cornerRadius: 6))
                 }
             }
             Text(message)
@@ -30,19 +30,22 @@ struct VerificationBanner: View {
             Button(action: onAdjustManually) {
                 Text("Adjust Manually")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.warning)
                     .frame(maxWidth: .infinity)
                     .frame(height: 38)
-                    .background(Theme.warning, in: RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall))
+                    .background(Theme.canvasSurfaceElevated, in: RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.cornerRadiusSmall)
+                            .stroke(Theme.warning.opacity(0.24), lineWidth: 1)
+                    )
             }
         }
         .padding(Theme.spacingM)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.cornerRadiusMedium))
+        .background(Theme.canvasSurface, in: RoundedRectangle(cornerRadius: Theme.cornerRadiusMedium))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.cornerRadiusMedium)
-                .stroke(Theme.warning.opacity(0.35), lineWidth: 1)
+                .stroke(Theme.warning.opacity(0.22), lineWidth: 1)
         )
-        .shadow(color: Theme.floatingShadowColor, radius: 16, x: 0, y: 8)
         .padding(.bottom, Theme.spacingS)
     }
 }

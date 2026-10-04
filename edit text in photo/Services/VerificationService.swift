@@ -18,28 +18,33 @@ enum VerificationService {
         region: TextRegion,
         renderedImage: CGImage,
         originalImage: CGImage,
-        patchRect: CGRect
+        patchRect: CGRect,
+        textOpacity: CGFloat
     ) async -> Result {
-        guard let croppedRendered = renderedImage.cropped(to: patchRect) else {
-            return Result(passed: false, recognizedText: nil, reason: "Could not crop the edited region for verification.")
-        }
+        var recognizedText: String?
+        // Very translucent lettering may be intentionally difficult to OCR. Keep the pixel
+        // boundary check below, but only require a text readback when contrast is sufficient.
+        if textOpacity >= 0.65 {
+            guard let croppedRendered = renderedImage.cropped(to: patchRect) else {
+                return Result(passed: false, recognizedText: nil, reason: "Could not crop the edited region for verification.")
+            }
 
-        let recognizedText: String
-        do {
-            let regions = try await OCRService.detectText(in: PipelineImage(cgImage: croppedRendered))
-            recognizedText = regions.map(\.text).joined(separator: " ")
-        } catch {
-            return Result(passed: false, recognizedText: nil, reason: "OCR re-check failed: \(error.localizedDescription)")
-        }
-
-        let distance = levenshtein(normalize(expectedText), normalize(recognizedText))
-        let tolerance = max(1, normalize(expectedText).count / 5)
-        guard distance <= tolerance else {
-            return Result(
-                passed: false,
-                recognizedText: recognizedText,
-                reason: "Rendered text reads as \u{201C}\(recognizedText)\u{201D}, not \u{201C}\(expectedText)\u{201D}."
-            )
+            do {
+                let regions = try await OCRService.detectText(in: PipelineImage(cgImage: croppedRendered))
+                let text = regions.map(\.text).joined(separator: " ")
+                recognizedText = text
+                let distance = levenshtein(normalize(expectedText), normalize(text))
+                let tolerance = max(1, normalize(expectedText).count / 5)
+                guard distance <= tolerance else {
+                    return Result(
+                        passed: false,
+                        recognizedText: text,
+                        reason: "Rendered text reads as \u{201C}\(text)\u{201D}, not \u{201C}\(expectedText)\u{201D}."
+                    )
+                }
+            } catch {
+                return Result(passed: false, recognizedText: nil, reason: "OCR re-check failed: \(error.localizedDescription)")
+            }
         }
 
         guard pixelsOutsideMaskUnchanged(original: originalImage, rendered: renderedImage, patchRect: patchRect) else {
@@ -50,7 +55,9 @@ enum VerificationService {
     }
 
     nonisolated private static func normalize(_ s: String) -> String {
-        s.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        s.lowercased()
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
     }
 
     nonisolated private static func levenshtein(_ a: String, _ b: String) -> Int {
